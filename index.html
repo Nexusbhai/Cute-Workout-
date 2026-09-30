@@ -23,149 +23,6 @@ const workouts={MON:{name:'Push A',items:[['Incline DB Press','3 × 6–10'],['F
 const plan=[['Breakfast','Oats + eggs/plant protein + fruit'],['Pre-workout','Water; coffee optional'],['Post-workout','Protein + creatine + fruit'],['Lunch','Rice/rotis + protein source + vegetables + curd'],['Snack','Protein serving if needed + fruit'],['Dinner','Protein source + rotis/rice + vegetables']];
 const songs=[['Luxurious','Gwen Stefani'],['Flashing Lights','Kanye West, Dwele'],['Escapism.','RAYE, 070 Shake'],['Écoute Chérie','Vendredi sur Mer'],['Circus','Britney Spears'],['Dead To Me','Kali Uchis'],['Streets','Doja Cat'],['São Paulo (feat. Anitta)','The Weeknd, Anitta'],['Side To Side','Ariana Grande, Nicki Minaj'],['Please Me','Cardi B, Bruno Mars'],['Feeling Good','Michael Bublé'],['GMFU (w/ 6arelyhuman)','Odetari, 6arelyhuman'],['Guess featuring billie eilish','Charli xcx, Billie Eilish'],['Luxury','Azealia Banks'],['Chicago','Michael Jackson'],['Gimme More','Britney Spears'],['Moonlight','Kali Uchis'],['Freak','Doja Cat'],['One Of The Girls','The Weeknd, JENNIE, Lily-Rose Depp'],['Swim','Chase Atlantic'],['Comme Des Garçons (Like the Boys)','Rina Sawayama'],['Runway Walk (Bonus)','Demrick'],['Bubble Pop Electric','Gwen Stefani, Johnny Vulture'],['FE!N (feat. Playboi Carti)','Travis Scott, Playboi Carti'],['Training Season','Dua Lipa'],['FASHION','Britney Manson'],['Promiscuous','Nelly Furtado, Timbaland'],["Don't Stop The Music",'Rihanna'],['Woman','Doja Cat'],['House Of Balloons / Glass Table Girls','The Weeknd'],['Slow Down','Chase Atlantic'],['Here','Alessia Cara'],['radar','lil hero'],['Les','Childish Gambino'],['Everyday','Ariana Grande, Future'],['Fame is a Gun','Addison Rae'],['Killshot - Slowed + Reverb','Magdalena Bay'],['Pretty','Coco & Clair Clair, Okthxbb'],['NEW DROP','Don Toliver'],['Out My Face (My Baby)','Ice Spice, Lil Yachty'],['You Right','Doja Cat, The Weeknd'],['HEAVEN AND BACK','Chase Atlantic'],['make you mine','Madison Beer'],['Looking at Me','Sabrina Carpenter'],['Obsessed','Gucci Mane, Mariah Carey'],['WHERE IS MY HUSBAND!','RAYE'],['No Scrubs','TLC'],['Killshot','Magdalena Bay'],['SexyBack (feat. Timbaland)','Justin Timberlake, Timbaland'],['PUNK TACTICS','Joey Valence & Brae'],['telepatía','Kali Uchis'],['After The Storm','Kali Uchis, Tyler, The Creator, Bootsy Collins'],['Igual Que Un Ángel','Kali Uchis, Peso Pluma'],['Melting','Kali Uchis'],['I Wish you Roses','Kali Uchis'],['Lovers Rock','TV Girl'],['Not Allowed','TV Girl'],['Cigarettes out the Window','TV Girl'],['Blue Hair','TV Girl'],['Taking What’s Not Yours','TV Girl'],['Pretty Boy','TV Girl'],['Pantyhose','TV Girl'],['BIRDS OF A FEATHER','Billie Eilish'],['lovely','Billie Eilish, Khalid'],["when the party's over",'Billie Eilish'],['ocean eyes','Billie Eilish'],['Happier Than Ever','Billie Eilish'],['bad guy','Billie Eilish'],['everything i wanted','Billie Eilish'],['Love Never Felt So Good','Michael Jackson'],['The Way You Make Me Feel','Michael Jackson'],['Rock with You','Michael Jackson'],["Don't Stop 'Til You Get Enough",'Michael Jackson'],['Remember the Time','Michael Jackson'],['You Rock My World','Michael Jackson'],['Billie Jean','Michael Jackson'],['Smooth Criminal','Michael Jackson'],['Wanna Be Startin’ Somethin’','Michael Jackson'],['P.Y.T. (Pretty Young Thing)','Michael Jackson'],['Human Nature','Michael Jackson'],['Say So','Doja Cat'],['Paint The Town Red','Doja Cat'],['Kiss Me More','Doja Cat, SZA'],['Agora Hills','Doja Cat'],['Good Looking','Suki Waterhouse'],['I Wanna Be Yours','Arctic Monkeys'],['Apocalypse','Cigarettes After Sex'],['After Dark','Mr.Kitty'],['The Perfect Girl','Mareux'],['Space Song','Beach House'],['Snooze','SZA'],['West Coast','Lana Del Rey'],['Summertime Sadness','Lana Del Rey'],['Dark Red','Steve Lacy'],['505','Arctic Monkeys'],['Daddy Issues','The Neighbourhood'],['Sweater Weather','The Neighbourhood'],['Nights Like This','The Kid LAROI'],['Duvet','bôa'],['K.','Cigarettes After Sex'],['Pretty Little Fears','6LACK, J. Cole'],['See You Again','Tyler, The Creator, Kali Uchis'],['Until I Found You','Stephen Sanchez'],['Earned It','The Weeknd'],['Kill Bill','SZA'],['Saturn','SZA'],['the perfect pair','beabadoobee'],['Glue Song','beabadoobee'],['Coffee','beabadoobee'],['Cologne','beabadoobee'],['Take A Bite','beabadoobee'],['Beaches','beabadoobee'],['Care','beabadoobee'],['Apple Cider','beabadoobee'],['Real Man','beabadoobee']];
 const foodDb=[['roti',110,3,18,3,120],['chapati',110,3,18,3,120],['egg',72,6.3,.4,4.8,62],['eggs',72,6.3,.4,4.8,62],['chicken',165,31,0,3.6,74],['chicken breast',165,31,0,3.6,74],['rice',130,2.7,28,.3,1],['oats',389,17,66,7,2],['banana',89,1.1,23,.3,1],['whey',120,24,3,2,150],['protein',120,24,3,2,150],['tofu',144,17,3,9,15],['curd',61,3.5,4.7,3.3,46],['yogurt',61,3.5,4.7,3.3,46],['peanut butter',588,25,20,50,5],['soya chunks',345,52,33,0.5,300]];
-let audio=new Audio();
-audio.preload='auto';
-const JAMENDO_CLIENT_ID='709fa152'; // Jamendo test client for read API; replace with your own production client id before public deployment.
-let current=null,currentIndex=-1,currentArt='',liked=JSON.parse(localStorage.getItem('likedSongs')||'[]'),lastResults=[],queue=[],queueIndex=-1;
-let shuffleOn=JSON.parse(localStorage.getItem('cwShuffle')||'true');
-let repeatMode=localStorage.getItem('cwRepeat')||'all'; // off | one | all
-let libraryQueue=songs.slice();
-function go(view){
-  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===view));
-  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
-  if(view==='workout'){ renderToday(); renderWorkoutDetails(); }
-  if(view==='diet'){ renderMeals(); }
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-function dayKey(d=new Date()){return ['SUN','MON','TUE','WED','THU','FRI','SAT'][d.getDay()]}
-function renderToday(){
-  const now=new Date();
-  const key=dayKey(now), w=workouts[key]||workouts.SUN;
-  const dateText=now.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});
-  const hour=now.getHours();
-  const greeting=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
-  const gd=document.getElementById('greeting'); if(gd) gd.textContent=greeting+' ✨';
-  const hd=document.getElementById('homeDate'); if(hd) hd.textContent=now.toLocaleDateString(undefined,{weekday:'long'});
-  const ld=document.getElementById('liveDate'); if(ld) ld.textContent=dateText;
-  const hw=document.getElementById('homeWorkout'); if(hw) hw.textContent=w.name;
-  const hm=document.getElementById('homeWorkoutMeta'); if(hm) hm.textContent=key==='SUN'?'Recovery day • Optional easy treadmill':`${w.items.length} exercises • Today`;
-  const wt=document.getElementById('workoutTitle'); if(wt) wt.textContent=key==='SUN'?'Recovery day':'Today’s workout';
-  const ws=document.getElementById('workoutSub'); if(ws) ws.textContent=dateText;
-  const wn=document.getElementById('workoutName'); if(wn) wn.textContent=w.name;
-  const wi=document.getElementById('workoutInfo'); if(wi) wi.textContent=key==='SUN'?'Rest and recover. Optional easy treadmill.':`${w.items.length} exercises • Progressive overload based on your last session`;
-  const list=document.getElementById('exerciseList'); if(list) list.innerHTML=w.items.map((x,i)=>`<div class="meal-item"><div><b>${i+1}. ${esc(x[0])}</b><br><small>${esc(x[1])}</small></div><span class="pill">${key==='SUN'?'Recovery':'Planned'}</span></div>`).join('');
-}
-function renderWorkoutDetails(){renderToday()}
-function startWorkout(){
-  const key=dayKey(), w=workouts[key]||workouts.SUN;
-  go('workout');
-  const list=document.getElementById('exerciseList');
-  if(!list)return;
-  list.innerHTML=w.items.map((x,i)=>`<div class="meal-item"><div><b>${i+1}. ${esc(x[0])}</b><br><small>${esc(x[1])}</small></div><button class="iconbtn" onclick="toast('${key==='SUN'?'Recovery day':'Exercise '+(i+1)+' ready'}')">▶</button></div>`).join('');
-  toast(key==='SUN'?'Today is a rest day.':'Workout started • follow the exercises below');
-}
-
-function escAttr(s){return esc(s)}
-// Amazon Music search adapter based on the API used by LastPerson07/Amazon-Music-Telegram-Bot.
-// The bot exposes an API_BASE; this client only uses its search/metadata layer.
-const AMAZON_API_BASE='https://amzn.afkarxyz.qzz.io/api';
-function normalizeMusicItem(x){
-  if(!x||typeof x!=='object') return null;
-  const title=x.title||x.name||x.track_name||x.trackName||x.song||x.song_name||x.metadata?.title||x.data?.title;
-  const artist=x.artist||x.artist_name||x.artistName||x.author||x.singer||x.metadata?.artist||x.data?.artist;
-  const album=x.album||x.album_name||x.albumName||x.metadata?.album||x.data?.album||'';
-  const duration=Number(x.duration||x.duration_ms/1000||x.length||x.seconds||x.metadata?.duration||x.data?.duration||0);
-  const art=x.artwork||x.image||x.image_url||x.cover||x.cover_url||x.album_art||x.album_image||x.thumbnail||x.metadata?.artwork||x.data?.artwork||'';
-  const audioUrl=x.audio||x.audio_url||x.audioUrl||x.stream||x.stream_url||x.streamUrl||x.url||x.play_url||x.playUrl||x.download_url||x.downloadUrl||x.data?.audio||x.data?.url||'';
-  const id=String(x.id||x.asin||x.track_id||x.trackId||x.data?.id||title+'|'+artist);
-  if(!title) return null;
-  return {id,trackName:String(title),artistName:String(artist||'Unknown artist'),albumName:String(album),duration:duration>1000?duration/1000:duration,artworkUrl100:String(art||''),audioUrl:String(audioUrl||''),downloadUrl:String(x.download_url||x.downloadUrl||''),downloadAllowed:false,license:'',shareUrl:String(x.share_url||x.shareUrl||x.url||''),source:'Amazon Music'};
-}
-function collectMusicItems(v,out=[]){
-  if(!v) return out;
-  if(Array.isArray(v)){for(const x of v) collectMusicItems(x,out);return out}
-  if(typeof v==='object'){
-    const n=normalizeMusicItem(v); if(n) out.push(n);
-    for(const k of ['results','tracks','songs','items','data','music','hits']) if(v[k]&&v[k]!==v) collectMusicItems(v[k],out);
-  }
-  return out;
-}
-async function amazonSearch(q){
-  const enc=encodeURIComponent(q);
-  const urls=[
-    `${AMAZON_API_BASE}/search?query=${enc}`,
-    `${AMAZON_API_BASE}/search?q=${enc}`,
-    `${AMAZON_API_BASE}/search/${enc}`,
-    `${AMAZON_API_BASE}/tracks/search?query=${enc}`,
-    `${AMAZON_API_BASE}/music/search?query=${enc}`
-  ];
-  let lastErr=null;
-  for(const url of urls){
-    try{
-      const r=await fetch(url,{headers:{Accept:'application/json'}});
-      if(!r.ok) continue;
-      const j=await r.json();
-      const items=collectMusicItems(j).filter(x=>x.trackName);
-      if(items.length) return items.filter((x,i,a)=>i===a.findIndex(y=>y.id===x.id)).slice(0,25);
-    }catch(e){lastErr=e}
-  }
-  throw lastErr||new Error('Amazon Music search unavailable');
-}
-function renderSongs(arr){
- document.getElementById('songs').innerHTML=arr.length?arr.map((s,i)=>{let key=s[0]+'|'+s[1],isLiked=liked.includes(key);return `<div class="music-row"><div class="art">♫</div><div class="song"><b>${esc(s[0])}</b><span>${esc(s[1])}</span></div><div class="row-actions"><button class="iconbtn" onclick='playLookup(${JSON.stringify(s[0])},${JSON.stringify(s[1])})'>▶</button><button class="iconbtn" onclick='likeSong(${JSON.stringify(s[0])},${JSON.stringify(s[1])})'>${isLiked?'♥':'♡'}</button></div></div>`}).join(''):'<div class="empty"><strong>No music found</strong><span>Try another song or artist.</span></div>';
-}
-function renderSourceResults(arr){
- lastResults=arr.map(x=>x.trackName?x:normalizeMusicItem(x)).filter(Boolean);
- document.getElementById('songs').innerHTML=lastResults.length?lastResults.map((x,i)=>`<div class="music-row"><div class="art">${x.artworkUrl100?`<img src="${escAttr(x.artworkUrl100)}" alt="">`:'♫'}</div><div class="song"><b>${esc(x.trackName)}</b><span>${esc(x.artistName)}${x.duration?' • '+fmtTime(x.duration*1000):''} • Amazon Music</span></div><div class="row-actions"><button class="iconbtn" onclick="playResult(${i})">▶</button><button class="iconbtn" onclick="likeSource(${i})">♡</button></div></div>`).join(''):'<div class="empty"><strong>No music found</strong><span>Try another search.</span></div>';
-}
-async function searchItunes(){
- let q=document.getElementById('q').value.trim(); if(!q){filterLibrary();return}
- document.getElementById('musicTitle').textContent='Searching Amazon Music…';
- try{const r=await amazonSearch(q);renderSourceResults(r);document.getElementById('musicTitle').textContent='Search results';}
- catch(e){document.getElementById('songs').innerHTML='<div class="empty"><strong>Music search unavailable</strong><span>The Amazon Music API is not responding right now.</span></div>';document.getElementById('musicTitle').textContent='Search results';}
-}
-async function playLookup(title,artist){
- toast('Finding track…');
- try{const r=await amazonSearch(title+' '+artist); if(!r.length){toast('Track not found.');return} const ranked=r.sort((a,b)=>scoreTrack(b,title,artist)-scoreTrack(a,title,artist)); const exact=ranked[0]; queue=ranked; queueIndex=0; if(exact.audioUrl) playTrack(exact); else {toast('Track found, but this source did not expose a browser-playable stream.');renderSourceResults(r)}}
- catch(e){toast('Music source unavailable.');}
-}
-function scoreTrack(x,title,artist){const a=(x.trackName||'').toLowerCase(),b=(x.artistName||'').toLowerCase(),t=title.toLowerCase(),ar=artist.toLowerCase();return (a===t?10:0)+(b===ar?10:0)+(a.includes(t)||t.includes(a)?4:0)+(b.includes(ar)||ar.includes(b)?4:0)}
-function playResult(i){if(lastResults[i]) { if(lastResults[i].audioUrl) playTrack(lastResults[i],true); else toast('This result has no browser-playable stream.'); }}
-function likeSource(i){const x=lastResults[i];if(!x)return;likeSong(x.trackName,x.artistName)}
-function playTrack(x,fromSearch=false){
- if(!x||!x.audioUrl){toast('This source does not provide a full track.');return}
- current=x; currentArt=x.artworkUrl100||''; if(fromSearch){queue=[...lastResults]} else if(!queue.length || !queue.some(t=>String(t.id)===String(x.id))){queue=buildQueueFromCurrent(x)} queueIndex=Math.max(0,queue.findIndex(t=>String(t.id)===String(x.id)));
- audio.src=x.audioUrl; audio.play().catch(()=>toast('Tap play to start the full track'));
- document.getElementById('now').textContent=x.trackName;document.getElementById('artist').textContent=x.artistName+' • Full track';document.getElementById('playerArt').src=currentArt;document.getElementById('player').classList.add('show');document.body.classList.add('music-playing');document.getElementById('playBtn').textContent='Ⅱ';updatePlayerModes();
-}
-function buildQueueFromCurrent(x){return [sourceTrackFromLibraryFallback(x),...libraryQueue.map(s=>({id:s[0]+'|'+s[1],trackName:s[0],artistName:s[1],duration:0,artworkUrl100:'',audioUrl:null}))]}
-function sourceTrackFromLibraryFallback(x){return x}
-function filterLibrary(){let q=(document.getElementById('q').value||'').toLowerCase().trim();let arr=q?songs.filter(s=>(s[0]+' '+s[1]).toLowerCase().includes(q)):songs;renderSongs(arr.slice(0,80));document.getElementById('musicTitle').textContent=q?'Library matches':'Your music'}
-function showMusicMode(mode,btn){document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));btn.classList.add('on');if(mode==='liked'){const arr=songs.filter(s=>liked.includes(s[0]+'|'+s[1]));renderSongs(arr);document.getElementById('musicTitle').textContent='Liked songs'}else if(mode==='search'){searchItunes()}else{renderSongs(songs);document.getElementById('musicTitle').textContent='Your music'}}
-function nextTrack(){
- if(!current)return;
- if(repeatMode==='one'){audio.currentTime=0;audio.play();return}
- if(queue.length){
-   let ni;
-   if(shuffleOn){ni=smartNextIndex();}else{ni=queueIndex+1;if(ni>=queue.length){if(repeatMode==='all')ni=0;else{stopPlayback();return}}}
-   const n=queue[ni]; if(n&&n.audioUrl){queueIndex=ni;playTrack(n);return}
- }
- stopPlayback();
-}
-function smartNextIndex(){if(queue.length<=1)return 0;let candidates=queue.map((_,i)=>i).filter(i=>i!==queueIndex);let recent=JSON.parse(localStorage.getItem('cwRecentQueue')||'[]');candidates=candidates.sort((a,b)=>(recent.includes(a)?1:0)-(recent.includes(b)?1:0));let pool=candidates.slice(0,Math.max(1,Math.ceil(candidates.length*.65)));let ni=pool[Math.floor(Math.random()*pool.length)];recent=[ni,...recent.filter(i=>i!==ni)].slice(0,6);localStorage.setItem('cwRecentQueue',JSON.stringify(recent));return ni}
-function previousTrack(){if(!current)return;if(audio.currentTime>4){audio.currentTime=0;return}if(!queue.length)return;let ni=queueIndex-1;if(ni<0)ni=repeatMode==='all'?queue.length-1:0;const n=queue[ni];if(n&&n.audioUrl){queueIndex=ni;playTrack(n)}}
-function stopPlayback(){audio.pause();audio.removeAttribute('src');audio.load();current=null;queue=[];queueIndex=-1;document.getElementById('player').classList.remove('show');document.body.classList.remove('music-playing')}
-function toggleAudio(){if(!current){go('music');return}if(audio.paused){audio.play();document.getElementById('playBtn').textContent='Ⅱ';document.body.classList.add('music-playing')}else{audio.pause();document.getElementById('playBtn').textContent='▶';document.body.classList.remove('music-playing')}}
-function toggleLike(){if(current)likeSong(current.trackName,current.artistName)}
-function likeSong(t,a){let k=t+'|'+a;if(liked.includes(k))liked=liked.filter(x=>x!==k);else liked.push(k);localStorage.setItem('likedSongs',JSON.stringify(liked));toast(liked.includes(k)?'Added to liked songs':'Removed from liked songs');if(document.getElementById('music').classList.contains('active'))filterLibrary()}
-function toggleShuffle(){shuffleOn=!shuffleOn;localStorage.setItem('cwShuffle',JSON.stringify(shuffleOn));updatePlayerModes();toast(shuffleOn?'Smart Shuffle on':'Shuffle off')}
-function toggleRepeat(){repeatMode=repeatMode==='off'?'all':repeatMode==='all'?'one':'off';localStorage.setItem('cwRepeat',repeatMode);updatePlayerModes();toast(repeatMode==='one'?'Repeat song':repeatMode==='all'?'Repeat queue':'Repeat off')}
-function updatePlayerModes(){document.getElementById('shuffleBtn').classList.toggle('active',shuffleOn);document.getElementById('repeatBtn').classList.toggle('active',repeatMode!=='off');document.getElementById('repeatBtn').textContent=repeatMode==='one'?'🔂':'↻'}
-async function downloadSource(i){const x=lastResults[i];if(!x||!x.downloadAllowed||!x.downloadUrl){toast('Download is not permitted for this track.');return}try{const r=await fetch(x.downloadUrl);if(!r.ok)throw new Error();const blob=await r.blob();const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(x.trackName+' - '+x.artistName+'.mp3').replace(/[\/:*?\"<>|]/g,'_');document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);toast('Full track download started')}catch(e){window.open(x.downloadUrl,'_blank');toast('Opening the permitted full-track download')} }
-function downloadCheck(){toast('Downloads are enabled only when the full source explicitly permits downloading.')}
-audio.addEventListener('timeupdate',()=>{const pct=audio.duration?audio.currentTime/audio.duration*100:0;document.getElementById('prog').style.width=pct+'%';document.getElementById('seekBar').value=pct;document.getElementById('curTime').textContent=fmtTime(audio.currentTime*1000);document.getElementById('durTime').textContent=fmtTime(audio.duration*1000)});
-audio.addEventListener('ended',nextTrack);audio.addEventListener('play',()=>{document.getElementById('playBtn').textContent='Ⅱ';document.body.classList.add('music-playing')});audio.addEventListener('pause',()=>{document.getElementById('playBtn').textContent='▶';document.body.classList.remove('music-playing')});
-document.getElementById('seekBar').addEventListener('input',e=>{if(audio.duration)audio.currentTime=(Number(e.target.value)/100)*audio.duration});document.getElementById('nextBtn').addEventListener('click',nextTrack);document.getElementById('prevBtn').addEventListener('click',previousTrack);document.getElementById('shuffleBtn').addEventListener('click',toggleShuffle);document.getElementById('repeatBtn').addEventListener('click',toggleRepeat);updatePlayerModes();
 function openFood(scan=false){document.getElementById('foodModal').classList.add('open');document.getElementById('modalFood').value='';if(scan)toast('Camera/gallery flow ready in the full build')}
 function closeFood(){document.getElementById('foodModal').classList.remove('open')}
 function analyzeModalFood(){const text=document.getElementById('modalFood').value;const r=estimateFood(text);document.getElementById('modalResult').innerHTML=macroHtml(r);if(text.trim())addMeal(text,r);}
@@ -237,8 +94,9 @@ function renderMeals(){let arr=JSON.parse(localStorage.getItem('cwMeals')||'[]')
 function fmtTime(ms){if(!ms)return '--:--';let s=Math.floor(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function toast(t){let e=document.getElementById('toast');e.textContent=t;e.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>e.classList.remove('show'),2500)}
-function initNav(){document.querySelectorAll('.nav button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view)));document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view==='home'));}
-if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initNav)}else{setTimeout(initNav,0)}
+function initNav(){document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view==='home'));}
+document.addEventListener('click',e=>{const b=e.target.closest('.nav button');if(b&&b.dataset.view){e.preventDefault();go(b.dataset.view);}});
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initNav)}else{initNav()}
 renderToday();renderMeals();setInterval(renderToday,30000);
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{});}
 </script><nav class="nav four-nav" aria-label="Main navigation">
