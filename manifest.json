@@ -1,1 +1,10 @@
-{"name":"Cute Workout","short_name":"Cute Workout","start_url":"./","display":"standalone","background_color":"#07070b","theme_color":"#9b5cff","description":"Fitness, nutrition and music demo."}
+{
+  "name": "Cute Workout",
+  "short_name": "Cute Workout",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#07060b",
+  "theme_color": "#9b5cff",
+  "description": "Fitness, diet and full-track music player.",
+  "icons": [{"src":"icon.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]
+}
