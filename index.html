@@ -45,6 +45,42 @@ let current=null,currentIndex=-1,currentArt='',liked=JSON.parse(localStorage.get
 let shuffleOn=JSON.parse(localStorage.getItem('cwShuffle')||'true');
 let repeatMode=localStorage.getItem('cwRepeat')||'all'; // off | one | all
 let libraryQueue=songs.slice();
+function go(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===view));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+  if(view==='workout'){ renderToday(); renderWorkoutDetails(); }
+  if(view==='diet'){ renderMeals(); }
+  if(view==='music'){ filterLibrary(); }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function dayKey(d=new Date()){return ['SUN','MON','TUE','WED','THU','FRI','SAT'][d.getDay()]}
+function renderToday(){
+  const now=new Date();
+  const key=dayKey(now), w=workouts[key]||workouts.SUN;
+  const dateText=now.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});
+  const hour=now.getHours();
+  const greeting=hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
+  const gd=document.getElementById('greeting'); if(gd) gd.textContent=greeting+' ✨';
+  const hd=document.getElementById('homeDate'); if(hd) hd.textContent=now.toLocaleDateString(undefined,{weekday:'long'});
+  const ld=document.getElementById('liveDate'); if(ld) ld.textContent=dateText;
+  const hw=document.getElementById('homeWorkout'); if(hw) hw.textContent=w.name;
+  const hm=document.getElementById('homeWorkoutMeta'); if(hm) hm.textContent=key==='SUN'?'Recovery day • Optional easy treadmill':`${w.items.length} exercises • Today`;
+  const wt=document.getElementById('workoutTitle'); if(wt) wt.textContent=key==='SUN'?'Recovery day':'Today’s workout';
+  const ws=document.getElementById('workoutSub'); if(ws) ws.textContent=dateText;
+  const wn=document.getElementById('workoutName'); if(wn) wn.textContent=w.name;
+  const wi=document.getElementById('workoutInfo'); if(wi) wi.textContent=key==='SUN'?'Rest and recover. Optional easy treadmill.':`${w.items.length} exercises • Progressive overload based on your last session`;
+  const list=document.getElementById('exerciseList'); if(list) list.innerHTML=w.items.map((x,i)=>`<div class="meal-item"><div><b>${i+1}. ${esc(x[0])}</b><br><small>${esc(x[1])}</small></div><span class="pill">${key==='SUN'?'Recovery':'Planned'}</span></div>`).join('');
+}
+function renderWorkoutDetails(){renderToday()}
+function startWorkout(){
+  const key=dayKey(), w=workouts[key]||workouts.SUN;
+  go('workout');
+  const list=document.getElementById('exerciseList');
+  if(!list)return;
+  list.innerHTML=w.items.map((x,i)=>`<div class="meal-item"><div><b>${i+1}. ${esc(x[0])}</b><br><small>${esc(x[1])}</small></div><button class="iconbtn" onclick="toast('${key==='SUN'?'Recovery day':'Exercise '+(i+1)+' ready'}')">▶</button></div>`).join('');
+  toast(key==='SUN'?'Today is a rest day.':'Workout started • follow the exercises below');
+}
+
 function escAttr(s){return esc(s)}
 function jamendoUrl(params){const p=new URLSearchParams({client_id:JAMENDO_CLIENT_ID,format:'json',audioformat:'mp32',imagesize:'300',limit:'25',...params});return 'https://api.jamendo.com/v3.0/tracks/?'+p.toString()}
 async function jamendoSearch(q){
