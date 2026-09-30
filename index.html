@@ -94,6 +94,32 @@ function renderMeals(){let arr=JSON.parse(localStorage.getItem('cwMeals')||'[]')
 function fmtTime(ms){if(!ms)return '--:--';let s=Math.floor(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function toast(t){let e=document.getElementById('toast');e.textContent=t;e.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>e.classList.remove('show'),2500)}
+function go(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===view));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(view==='workout') renderToday();
+  if(view==='diet') renderMeals();
+}
+function dayKey(){return ['SUN','MON','TUE','WED','THU','FRI','SAT'][new Date().getDay()]}
+function renderToday(){
+  const now=new Date(), key=dayKey(), w=workouts[key]||workouts.MON;
+  const hour=now.getHours();
+  const greeting=hour<12?'Good morning ✨':hour<18?'Good afternoon ✨':'Good evening ✨';
+  const date=now.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
+  const rest=key==='SUN';
+  document.getElementById('greeting').textContent=greeting;
+  document.getElementById('homeDate').textContent=date;
+  document.getElementById('liveDate').textContent=rest?'Recovery day — take it easy.':'Your scheduled workout for today.';
+  document.getElementById('homeWorkout').textContent=w.name;
+  document.getElementById('homeWorkoutMeta').textContent=rest?'Recovery / light cardio':w.items.length+' exercises';
+  document.getElementById('workoutTitle').textContent=rest?'Today’s recovery':'Today’s workout';
+  document.getElementById('workoutSub').textContent=date;
+  document.getElementById('workoutName').textContent=w.name;
+  document.getElementById('workoutInfo').textContent=rest?'Recovery / optional easy cardio':w.items.length+' exercises';
+  document.getElementById('exerciseList').innerHTML=w.items.map((x,i)=>`<div class="meal-item"><div><b>${i+1}. ${esc(x[0])}</b><br><small>${esc(x[1])}</small></div></div>`).join('');
+}
+function startWorkout(){go('workout');renderToday();toast('Workout ready • follow the exercises below')}
 function initNav(){document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view==='home'));}
 document.addEventListener('click',e=>{const b=e.target.closest('.nav button');if(b&&b.dataset.view){e.preventDefault();go(b.dataset.view);}});
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initNav)}else{initNav()}
