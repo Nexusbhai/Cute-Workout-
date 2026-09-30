@@ -82,34 +82,71 @@ function startWorkout(){
 }
 
 function escAttr(s){return esc(s)}
-function jamendoUrl(params){const p=new URLSearchParams({client_id:JAMENDO_CLIENT_ID,format:'json',audioformat:'mp32',imagesize:'300',limit:'25',...params});return 'https://api.jamendo.com/v3.0/tracks/?'+p.toString()}
-async function jamendoSearch(q){
- const r=await fetch(jamendoUrl({search:q}));
- if(!r.ok) throw new Error('Jamendo search failed');
- const j=await r.json();
- return (j.results||[]).filter(x=>x.audio && Number(x.duration||0)>30);
+// Amazon Music search adapter based on the API used by LastPerson07/Amazon-Music-Telegram-Bot.
+// The bot exposes an API_BASE; this client only uses its search/metadata layer.
+const AMAZON_API_BASE='https://amzn.afkarxyz.qzz.io/api';
+function normalizeMusicItem(x){
+  if(!x||typeof x!=='object') return null;
+  const title=x.title||x.name||x.track_name||x.trackName||x.song||x.song_name||x.metadata?.title||x.data?.title;
+  const artist=x.artist||x.artist_name||x.artistName||x.author||x.singer||x.metadata?.artist||x.data?.artist;
+  const album=x.album||x.album_name||x.albumName||x.metadata?.album||x.data?.album||'';
+  const duration=Number(x.duration||x.duration_ms/1000||x.length||x.seconds||x.metadata?.duration||x.data?.duration||0);
+  const art=x.artwork||x.image||x.image_url||x.cover||x.cover_url||x.album_art||x.album_image||x.thumbnail||x.metadata?.artwork||x.data?.artwork||'';
+  const audioUrl=x.audio||x.audio_url||x.audioUrl||x.stream||x.stream_url||x.streamUrl||x.url||x.play_url||x.playUrl||x.download_url||x.downloadUrl||x.data?.audio||x.data?.url||'';
+  const id=String(x.id||x.asin||x.track_id||x.trackId||x.data?.id||title+'|'+artist);
+  if(!title) return null;
+  return {id,trackName:String(title),artistName:String(artist||'Unknown artist'),albumName:String(album),duration:duration>1000?duration/1000:duration,artworkUrl100:String(art||''),audioUrl:String(audioUrl||''),downloadUrl:String(x.download_url||x.downloadUrl||''),downloadAllowed:false,license:'',shareUrl:String(x.share_url||x.shareUrl||x.url||''),source:'Amazon Music'};
 }
-function sourceTrack(x){return {id:String(x.id),trackName:x.name||x.track_name||'Unknown',artistName:x.artist_name||'Unknown artist',duration:Number(x.duration||0),artworkUrl100:x.image||x.album_image||'',audioUrl:x.audio,downloadUrl:x.audiodownload||'',downloadAllowed:!!x.audiodownload_allowed,license:x.license_ccurl||'',shareUrl:x.shareurl||x.shorturl||'',source:'Jamendo'}}
+function collectMusicItems(v,out=[]){
+  if(!v) return out;
+  if(Array.isArray(v)){for(const x of v) collectMusicItems(x,out);return out}
+  if(typeof v==='object'){
+    const n=normalizeMusicItem(v); if(n) out.push(n);
+    for(const k of ['results','tracks','songs','items','data','music','hits']) if(v[k]&&v[k]!==v) collectMusicItems(v[k],out);
+  }
+  return out;
+}
+async function amazonSearch(q){
+  const enc=encodeURIComponent(q);
+  const urls=[
+    `${AMAZON_API_BASE}/search?query=${enc}`,
+    `${AMAZON_API_BASE}/search?q=${enc}`,
+    `${AMAZON_API_BASE}/search/${enc}`,
+    `${AMAZON_API_BASE}/tracks/search?query=${enc}`,
+    `${AMAZON_API_BASE}/music/search?query=${enc}`
+  ];
+  let lastErr=null;
+  for(const url of urls){
+    try{
+      const r=await fetch(url,{headers:{Accept:'application/json'}});
+      if(!r.ok) continue;
+      const j=await r.json();
+      const items=collectMusicItems(j).filter(x=>x.trackName);
+      if(items.length) return items.filter((x,i,a)=>i===a.findIndex(y=>y.id===x.id)).slice(0,25);
+    }catch(e){lastErr=e}
+  }
+  throw lastErr||new Error('Amazon Music search unavailable');
+}
 function renderSongs(arr){
- document.getElementById('songs').innerHTML=arr.length?arr.map((s,i)=>{let key=s[0]+'|'+s[1],isLiked=liked.includes(key);return `<div class="music-row"><div class="art">♫</div><div class="song"><b>${esc(s[0])}</b><span>${esc(s[1])}</span></div><div class="row-actions"><button class="iconbtn" onclick='playLookup(${JSON.stringify(s[0])},${JSON.stringify(s[1])})'>▶</button><button class="iconbtn" onclick='likeSong(${JSON.stringify(s[0])},${JSON.stringify(s[1])})'>${isLiked?'♥':'♡'}</button></div></div>`}).join(''):'<div class="empty"><strong>No full-length source found</strong>Search will not fall back to a 20-second preview.</div>';
+ document.getElementById('songs').innerHTML=arr.length?arr.map((s,i)=>{let key=s[0]+'|'+s[1],isLiked=liked.includes(key);return `<div class="music-row"><div class="art">♫</div><div class="song"><b>${esc(s[0])}</b><span>${esc(s[1])}</span></div><div class="row-actions"><button class="iconbtn" onclick='playLookup(${JSON.stringify(s[0])},${JSON.stringify(s[1])})'>▶</button><button class="iconbtn" onclick='likeSong(${JSON.stringify(s[0])},${JSON.stringify(s[1])})'>${isLiked?'♥':'♡'}</button></div></div>`}).join(''):'<div class="empty"><strong>No music found</strong><span>Try another song or artist.</span></div>';
 }
 function renderSourceResults(arr){
- lastResults=arr.map(sourceTrack);
- document.getElementById('songs').innerHTML=lastResults.length?lastResults.map((x,i)=>`<div class="music-row"><div class="art"><img src="${escAttr(x.artworkUrl100)}" alt=""></div><div class="song"><b>${esc(x.trackName)}</b><span>${esc(x.artistName)} • ${fmtTime(x.duration*1000)} • Full track</span></div><div class="row-actions"><button class="iconbtn" onclick="playResult(${i})">▶</button><button class="iconbtn" onclick="likeSource(${i})">♡</button>${x.downloadAllowed?`<button class="iconbtn" onclick="downloadSource(${i})">↓</button>`:''}</div></div>`).join(''):'<div class="empty"><strong>No full-length track available</strong><span>Try another search or use your local music.</span></div>';
+ lastResults=arr.map(x=>x.trackName?x:normalizeMusicItem(x)).filter(Boolean);
+ document.getElementById('songs').innerHTML=lastResults.length?lastResults.map((x,i)=>`<div class="music-row"><div class="art">${x.artworkUrl100?`<img src="${escAttr(x.artworkUrl100)}" alt="">`:'♫'}</div><div class="song"><b>${esc(x.trackName)}</b><span>${esc(x.artistName)}${x.duration?' • '+fmtTime(x.duration*1000):''} • Amazon Music</span></div><div class="row-actions"><button class="iconbtn" onclick="playResult(${i})">▶</button><button class="iconbtn" onclick="likeSource(${i})">♡</button></div></div>`).join(''):'<div class="empty"><strong>No music found</strong><span>Try another search.</span></div>';
 }
-async function searchItunes(){ // kept name for button compatibility; now searches full-length source only
+async function searchItunes(){
  let q=document.getElementById('q').value.trim(); if(!q){filterLibrary();return}
- document.getElementById('musicTitle').textContent='Finding full tracks…';
- try{const r=await jamendoSearch(q);renderSourceResults(r);document.getElementById('musicTitle').textContent='Full-track search results';}
- catch(e){document.getElementById('songs').innerHTML='<div class="empty"><strong>Music source unavailable</strong><span>Try again in a moment.</span></div>';document.getElementById('musicTitle').textContent='Search results';}
+ document.getElementById('musicTitle').textContent='Searching Amazon Music…';
+ try{const r=await amazonSearch(q);renderSourceResults(r);document.getElementById('musicTitle').textContent='Search results';}
+ catch(e){document.getElementById('songs').innerHTML='<div class="empty"><strong>Music search unavailable</strong><span>The Amazon Music API is not responding right now.</span></div>';document.getElementById('musicTitle').textContent='Search results';}
 }
 async function playLookup(title,artist){
- toast('Finding full-length version…');
- try{const r=await jamendoSearch(title+' '+artist); if(!r.length){toast('No full-length licensed source found for this track.');return} const ranked=r.sort((a,b)=>scoreTrack(b,title,artist)-scoreTrack(a,title,artist)).map(sourceTrack); const exact=ranked[0]; queue=ranked.length?ranked:[exact]; queueIndex=0; playTrack(exact);}
- catch(e){toast('Full-track source unavailable.');}
+ toast('Finding track…');
+ try{const r=await amazonSearch(title+' '+artist); if(!r.length){toast('Track not found.');return} const ranked=r.sort((a,b)=>scoreTrack(b,title,artist)-scoreTrack(a,title,artist)); const exact=ranked[0]; queue=ranked; queueIndex=0; if(exact.audioUrl) playTrack(exact); else {toast('Track found, but this source did not expose a browser-playable stream.');renderSourceResults(r)}}
+ catch(e){toast('Music source unavailable.');}
 }
-function scoreTrack(x,title,artist){const a=(x.name||'').toLowerCase(),b=(x.artist_name||'').toLowerCase(),t=title.toLowerCase(),ar=artist.toLowerCase();return (a===t?10:0)+(b===ar?10:0)+(a.includes(t)||t.includes(a)?4:0)+(b.includes(ar)||ar.includes(b)?4:0)}
-function playResult(i){if(lastResults[i]) playTrack(lastResults[i],true)}
+function scoreTrack(x,title,artist){const a=(x.trackName||'').toLowerCase(),b=(x.artistName||'').toLowerCase(),t=title.toLowerCase(),ar=artist.toLowerCase();return (a===t?10:0)+(b===ar?10:0)+(a.includes(t)||t.includes(a)?4:0)+(b.includes(ar)||ar.includes(b)?4:0)}
+function playResult(i){if(lastResults[i]) { if(lastResults[i].audioUrl) playTrack(lastResults[i],true); else toast('This result has no browser-playable stream.'); }}
 function likeSource(i){const x=lastResults[i];if(!x)return;likeSong(x.trackName,x.artistName)}
 function playTrack(x,fromSearch=false){
  if(!x||!x.audioUrl){toast('This source does not provide a full track.');return}
@@ -149,7 +186,66 @@ function openFood(scan=false){document.getElementById('foodModal').classList.add
 function closeFood(){document.getElementById('foodModal').classList.remove('open')}
 function analyzeModalFood(){const text=document.getElementById('modalFood').value;const r=estimateFood(text);document.getElementById('modalResult').innerHTML=macroHtml(r);if(text.trim())addMeal(text,r);}
 function analyzeFood(){const text=document.getElementById('foodText').value;const r=estimateFood(text);document.getElementById('analysis').innerHTML=macroHtml(r);if(text.trim())addMeal(text,r)}
-function estimateFood(text){let t=text.toLowerCase();let total={cal:0,p:0,c:0,f:0,s:0};for(const [name,cal,p,c,f,s] of foodDb){let re=new RegExp('(\\d+(?:\\.\\d+)?)\\s*(?:g|grams?|kg)?\\s*'+name.replace(/ /g,'\\s*'),'i');let m=t.match(re);let qty=m?parseFloat(m[1]):0;if(m&&/kg/.test(m[0]))qty*=1000;if(qty){let factor=qty/(name.includes('egg')?1:100);if(name.includes('egg'))factor=qty;total.cal+=cal*factor;total.p+=p*factor;total.c+=c*factor;total.f+=f*factor;total.s+=s*factor}}for(const [name,cal,p,c,f,s] of foodDb){if(!new RegExp('\\b'+name.replace(/ /g,'\\s*')+'\\b','i').test(t))continue;if(name.includes('egg')&&/\\b(?:one|an|a)\\s+egg\\b/.test(t)){total.cal+=cal;total.p+=p;total.c+=c;total.f+=f;total.s+=s}}return Object.fromEntries(Object.entries(total).map(([k,v])=>[k,Math.round(v)]) )}
+function estimateFood(text){
+  const t=(text||'').toLowerCase().replace(/,/g,' ').replace(/\bchiken\b/g,'chicken').replace(/\bchkn\b/g,'chicken').replace(/\bcurd rice\b/g,'curd and rice');
+  const total={cal:0,p:0,c:0,f:0,s:0};
+  const add=(v,factor)=>{total.cal+=v[0]*factor;total.p+=v[1]*factor;total.c+=v[2]*factor;total.f+=v[3]*factor;total.s+=v[4]*factor};
+
+  // Handles natural phrases such as:
+  // "150g chicken breast", "120gm rice", "4 eggs", "1 scoop plant protein",
+  // "2 rotis", "50 grams oats", "1 banana", etc.
+  const items=[
+    {re:/(\d+(?:\.\d+)?)\s*(?:kg|g|gm|grams?)\s*(?:of\s+)?chicken(?:\s+breast)?/i,v:[165,31,0,3.6,74],mode:'100g'},
+    {re:/(\d+(?:\.\d+)?)\s*(?:kg|g|gm|grams?)\s*(?:of\s+)?rice\b/i,v:[130,2.7,28,.3,1],mode:'100g'},
+    {re:/(\d+(?:\.\d+)?)\s*(?:kg|g|gm|grams?)\s*(?:of\s+)?oats\b/i,v:[389,17,66,7,2],mode:'100g'},
+    {re:/(\d+(?:\.\d+)?)\s*(?:kg|g|gm|grams?)\s*(?:of\s+)?tofu\b/i,v:[144,17,3,9,15],mode:'100g'},
+    {re:/(\d+(?:\.\d+)?)\s*(?:kg|g|gm|grams?)\s*(?:of\s+)?soya\s+chunks?/i,v:[345,52,33,.5,300],mode:'100g'},
+    {re:/(\d+(?:\.\d+)?)\s*(?:kg|g|gm|grams?)\s*(?:of\s+)?peanut\s+butter/i,v:[588,25,20,50,5],mode:'100g'},
+    {re:/(\d+(?:\.\d+)?)\s*(?:kg|g|gm|grams?)\s*(?:of\s+)?curd|(\d+(?:\.\d+)?)\s*(?:kg|g|gm|grams?)\s*(?:of\s+)?yogurt/i,v:[61,3.5,4.7,3.3,46],mode:'100g'},
+    {re:/(\d+(?:\.\d+)?)\s*(?:kg|g|gm|grams?)\s*(?:of\s+)?(?:plants?\s+)?protein(?:\s+powder)?/i,v:[120,24,3,2,150],mode:'scoop'},
+    {re:/(\d+(?:\.\d+)?)\s*(?:kg|g|gm|grams?)\s*(?:of\s+)?whey(?:\s+protein)?/i,v:[120,24,3,2,150],mode:'scoop'},
+    {re:/(\d+(?:\.\d+)?)\s*scoops?\s+(?:of\s+)?(?:plants?\s+)?protein(?:\s+powder)?/i,v:[120,24,3,2,150],mode:'scoop'},
+    {re:/(\d+(?:\.\d+)?)\s*scoops?\s+(?:of\s+)?whey(?:\s+protein)?/i,v:[120,24,3,2,150],mode:'scoop'},
+    {re:/(\d+(?:\.\d+)?)\s*(?:whole\s+)?eggs?\b/i,v:[72,6.3,.4,4.8,62],mode:'each'},
+    {re:/(\d+(?:\.\d+)?)\s*(?:medium\s+)?(?:whole\s+)?bananas?\b/i,v:[89,1.1,23,.3,1],mode:'each'},
+    {re:/(\d+(?:\.\d+)?)\s*(?:whole\s+)?rotis?\b|(\d+(?:\.\d+)?)\s*(?:whole\s+)?chapatis?\b/i,v:[110,3,18,3,120],mode:'each'},
+  ];
+
+  const used=[];
+  for(const it of items){
+    const m=t.match(it.re);
+    if(!m) continue;
+    const qty=parseFloat(m[1]||m[2]||0);
+    if(!qty) continue;
+    let factor=qty;
+    if(it.mode==='100g') factor=qty/100;
+    if(it.mode==='scoop') factor=qty;
+    add(it.v,factor);
+    used.push(it);
+  }
+
+  // Common Indian portion phrases. These are estimates; raw/cooked state can change values.
+  const portions=[
+    {re:/\b(?:a|one|1)\s+(?:bowl|katori)\s+(?:of\s+)?rice\b/i,v:[195,4.1,42,.5,2]},
+    {re:/\b(?:a|one|1)\s+(?:bowl|katori)\s+(?:of\s+)?oats\b/i,v:[195,8.5,33,3.5,1]},
+    {re:/\b(?:a|one|1)\s+(?:scoop|serving)\s+(?:of\s+)?(?:plants?\s+)?protein\b/i,v:[120,24,3,2,150]},
+    {re:/\b(?:a|one|1)\s+(?:bowl|plate)\s+(?:of\s+)?chicken(?:\s+breast)?(?:\s+curry)?\b/i,v:[330,31,4,20,350]}
+  ];
+  for(const x of portions) if(x.re.test(t)) add(x.v,1);
+
+  // Fallback for "a/an/one egg", "a banana", etc.
+  const singles=[
+    {re:/\b(?:a|an|one)\s+egg\b/i,v:[72,6.3,.4,4.8,62]},
+    {re:/\b(?:a|one)\s+banana\b/i,v:[89,1.1,23,.3,1]},
+    {re:/\b(?:a|one)\s+roti\b/i,v:[110,3,18,3,120]},
+    {re:/\b(?:a|one)\s+chapati\b/i,v:[110,3,18,3,120]},
+    {re:/\b(?:a|one)\s+scoop\s+(?:of\s+)?(?:plants?\s+)?protein\b/i,v:[120,24,3,2,150]},
+    {re:/\b(?:a|one)\s+scoop\s+(?:of\s+)?whey\b/i,v:[120,24,3,2,150]},
+  ];
+  for(const x of singles) if(x.re.test(t)) add(x.v,1);
+
+  return Object.fromEntries(Object.entries(total).map(([k,v])=>[k,Math.round(v)]));
+}
 function macroHtml(r){let targets={cal:+document.getElementById('goalKcal').textContent.replace(/,/g,''),p:145};let eaten=JSON.parse(localStorage.getItem('cwMeals')||'[]').reduce((a,x)=>{for(let k of Object.keys(a))a[k]+=x.r[k]||0;return a},{cal:0,p:0,c:0,f:0,s:0});let remCal=Math.max(0,targets.cal-eaten.cal-r.cal),remP=Math.max(0,targets.p-eaten.p-r.p);return `<div class="macro-grid"><div class="macro"><b>${r.cal} kcal</b><span>Calories</span></div><div class="macro"><b>${r.p} g</b><span>Protein</span></div><div class="macro"><b>${r.c} g</b><span>Carbs</span></div><div class="macro"><b>${r.f} g</b><span>Fat</span></div><div class="macro"><b>${r.s} mg</b><span>Sodium</span></div><div class="macro"><b>${remCal} kcal</b><span>Remaining after this</span></div></div>`}
 function addMeal(text,r){let arr=JSON.parse(localStorage.getItem('cwMeals')||'[]');arr.push({text,r,time:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})});localStorage.setItem('cwMeals',JSON.stringify(arr));renderMeals();closeFood();toast('Meal added • targets updated')}
 function renderMeals(){let arr=JSON.parse(localStorage.getItem('cwMeals')||'[]');let total=arr.reduce((a,x)=>{for(let k of Object.keys(a))a[k]+=x.r[k]||0;return a},{cal:0,p:0,c:0,f:0,s:0});let kcal=1940-total.cal,prot=145-total.p;document.getElementById('calRemain').textContent=Math.max(0,kcal).toLocaleString();document.getElementById('proRemain').textContent=Math.max(0,prot)+' g';document.getElementById('mealLog').innerHTML=arr.length?arr.map(x=>`<div class="meal-item"><div><b>${esc(x.text)}</b><br><small>${x.time}</small></div><small>${x.r.cal} kcal • ${x.r.p}g protein<br>${x.r.c}g carbs • ${x.r.s}mg sodium</small></div>`).join(''):'<div class="empty">Nothing logged yet today.</div>';document.getElementById('planList').innerHTML=plan.map(x=>`<div class="meal-item"><div><b>${x[0]}</b><br><small>${x[1]}</small></div><button class="iconbtn" onclick='document.getElementById("modalFood").value=${JSON.stringify(x[1])};openFood()'>+</button></div>`).join('')}
